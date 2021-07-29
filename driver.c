@@ -24,8 +24,9 @@
 #define MOTOR_3_PIN 20
 
 #define MAINS_TIME_CONSTANT 0x28
+#define SHARED_FILE_SIZE 9
 
-#define debug(...) //printf(__VA_ARGS__)
+#define DEBUG(...) printf(__VA_ARGS__)
 
 typedef enum {
     OK, FAIL
@@ -41,19 +42,13 @@ typedef struct {
     u_int8_t mains2;
 } Ports;
 
-typedef struct {
-    int16_t temp1;
-    int16_t temp2;
-} Sensors;
-
 typedef enum {
-    NOT_INITIALIZED, IDLE, DRIVER_LOCK, DRIVER_DONE, CONTROLLER_LOCK, CONTROLLER_DONE
+    NOT_INITIALIZED, IDLE, CONTROLLER_LOCK
 } Lock;
 
 typedef struct {
     u_int8_t lock;
     Ports ports;
-    Sensors sensors;
 } SharedFile;
 
 void updateFilePrivileges(char * filename) {
@@ -80,15 +75,9 @@ Status readSharedFile(SharedFile * sharedFile) {
     }
 }
 
-void readSensors(Sensors * sensors) {
-    debug("readSensors\n");
-    time_t timer;
-    time(&timer);
-    sensors->temp1 = timer;
-    sensors->temp2 = timer + 7884;
-}
-
 void initPorts(Ports * ports) {
+    DEBUG("Init ports\n");
+
     pinMode(POWER_PIN, OUTPUT);    
     digitalWrite(POWER_PIN, 0);
 
@@ -130,22 +119,21 @@ bool isSharedFileWriteReady(SharedFile * sharedFile) {
         u_int8_t lock;
         int readSize = fread(&lock, sizeof(lock), 1, fileHandle);
         if (readSize != 1) { // if file empty
-            debug("File empty\n");
+            DEBUG("File empty\n");
             lock = NOT_INITIALIZED;
         }
 
         // if lock invalid
-        if (lock != NOT_INITIALIZED && lock != IDLE && lock != DRIVER_LOCK &&
-            lock != DRIVER_DONE && lock != CONTROLLER_LOCK && lock != CONTROLLER_DONE
+        if (lock != NOT_INITIALIZED && lock != IDLE && lock != CONTROLLER_LOCK
         ) {
-            debug("NOT_INITIALIZED (%d)\n", lock);
+            DEBUG("NOT_INITIALIZED (%d)\n", lock);
             lock = NOT_INITIALIZED;
         }
 
         // if size invalid
         fseek(fileHandle, 0, SEEK_END);
-        if (ftell(fileHandle) != 13) {
-            debug("file size: %ld\n", ftell(fileHandle));
+        if (ftell(fileHandle) != SHARED_FILE_SIZE) {
+            DEBUG("file size: %ld\n", ftell(fileHandle));
             lock = NOT_INITIALIZED;
         }
 
@@ -153,9 +141,9 @@ bool isSharedFileWriteReady(SharedFile * sharedFile) {
 
         sharedFile->lock = lock;
 
-        bool isReady = (lock == IDLE || lock == NOT_INITIALIZED || lock == DRIVER_LOCK || lock == DRIVER_DONE);
+        bool isReady = (lock == IDLE || lock == NOT_INITIALIZED);
 
-        debug("is write ready: %d, lock: %d\n", isReady, lock);
+        DEBUG("is write ready: %d, lock: %d\n", isReady, lock);
 
         return isReady;
     } else {
@@ -164,11 +152,12 @@ bool isSharedFileWriteReady(SharedFile * sharedFile) {
     }
 }
 
-void initSharedFileStruct(Ports * ports, Sensors * sensors, SharedFile * sharedFile) {
+void initSharedFileStruct(Ports * ports, SharedFile * sharedFile) {
+    DEBUG("initSharedFileStruct\n");
+
     sharedFile->lock = IDLE;
 
     sharedFile->ports = *ports;
-    sharedFile->sensors = *sensors;
 }
 
 void dumpSharedFileStruct(SharedFile * sharedFile, FILE * fileHandle) {
@@ -184,21 +173,18 @@ void dumpSharedFileStruct(SharedFile * sharedFile, FILE * fileHandle) {
 
     fwrite(&sharedFile->ports.mains1, sizeof(sharedFile->ports.mains1), 1, fileHandle);
     fwrite(&sharedFile->ports.mains2, sizeof(sharedFile->ports.mains2), 1, fileHandle);
-
-    fwrite(&sharedFile->sensors.temp1, sizeof(sharedFile->sensors.temp1), 1, fileHandle);
-    fwrite(&sharedFile->sensors.temp2, sizeof(sharedFile->sensors.temp2), 1, fileHandle);
-    
 }
 
 Status createSharedFile(SharedFile * sharedFile) {
-    debug("Create shared file!!!\n");
+    DEBUG("Create shared file!!!\n");
 
     FILE * newFileHandle = fopen(SHARED_FILE_PATH, "w");
     if (newFileHandle == NULL) {
-        debug("Cant create file...\n");
+        DEBUG("Cant create file...\n");
         return FAIL;
     }
 
+    sharedFile->lock = IDLE;
     dumpSharedFileStruct(sharedFile, newFileHandle);
 
     fclose(newFileHandle);
@@ -206,65 +192,6 @@ Status createSharedFile(SharedFile * sharedFile) {
     updateFilePrivileges(SHARED_FILE_PATH);
 
     return OK;
-}
-
-Status writeSharedFile(SharedFile * sharedFile) {
-    debug("write shared file!!!\n");
-
-    FILE * fileHandle = fopen(SHARED_FILE_PATH, "rb+");
-    if (fileHandle == NULL) {
-        debug("Cant write file...\n");
-        return FAIL;
-    }
-
-    dumpSharedFileStruct(sharedFile, fileHandle);
-
-    fclose(fileHandle);
-
-    return OK;
-}
-
-Status lockSharedFileCommon(SharedFile * sharedFile, bool createIfNotExists, Lock lock) {
-    if (!isSharedFileWriteReady(sharedFile)) {
-        return FAIL;
-    }
-
-    debug("shared file lock: %d\n", sharedFile->lock);
-
-    if (createIfNotExists && sharedFile->lock == NOT_INITIALIZED && lock == DRIVER_LOCK) {
-        if (createSharedFile(sharedFile) == FAIL) {
-            return FAIL;
-        }
-    } else {
-        return FAIL;
-    }
-
-    FILE * fileHandle = fopen(SHARED_FILE_PATH, "rb+");
-    if (fileHandle == NULL) {
-        return FAIL;
-    }
-    sharedFile->lock = lock;
-    
-    fwrite(&sharedFile->lock, sizeof(sharedFile->lock), 1, fileHandle);
-
-    fclose(fileHandle);
-    return OK;
-}
-
-Status lockSharedFile(SharedFile * sharedFile) {
-    return lockSharedFileCommon(sharedFile, true, DRIVER_LOCK);
-}
-
-Status unlockSharedFile(SharedFile * sharedFile) {
-    return lockSharedFileCommon(sharedFile, false, DRIVER_DONE);
-}
-
-bool areSensorsChanged(Sensors * sensors, SharedFile * sharedFile) {
-    return (
-        sensors->temp1 != sharedFile->sensors.temp1 ||
-        sensors->temp2 != sharedFile->sensors.temp2 ||
-        sharedFile->lock == NOT_INITIALIZED
-    );
 }
 
 bool isSharedFileReadReady(SharedFile * sharedFile) {
@@ -283,7 +210,7 @@ bool isSharedFileReadReady(SharedFile * sharedFile) {
 
         bool isReady = (lock != CONTROLLER_LOCK && lock != NOT_INITIALIZED);
 
-        debug("is read ready: %d, lock: %d\n", isReady, lock);
+        DEBUG("is read ready: %d, lock: %d\n", isReady, lock);
 
         return isReady;
     } else {
@@ -294,7 +221,7 @@ bool isSharedFileReadReady(SharedFile * sharedFile) {
 Status readSharedFilePorts(SharedFile * sharedFile) {
     FILE * fileHandle = fopen(SHARED_FILE_PATH, "rb");
     if (fileHandle == NULL) {
-        debug("Cant read file...\n");
+        DEBUG("Cant read file...\n");
         return FAIL;
     }
 
@@ -364,7 +291,7 @@ bool arePortsChanged(Ports * ports, SharedFile * sharedFile) {
 }
 
 void updatePorts(Ports * ports, SharedFile * sharedFile) {
-    debug("Updating ports!\n");
+    DEBUG("Updating ports!\n");
 
     if (sharedFile->ports.power != ports->power) {
         ports->power = sharedFile->ports.power;
@@ -386,7 +313,7 @@ void updatePorts(Ports * ports, SharedFile * sharedFile) {
         digitalWrite(MOTOR_3_PIN, ports->motor3);
     }
 
-    debug("SOUND: %d, \n", sharedFile->ports.sound);
+    DEBUG("SOUND: %d, \n", sharedFile->ports.sound);
 
     if (sharedFile->ports.sound != ports->sound) {
         ports->sound = sharedFile->ports.sound;
@@ -411,6 +338,7 @@ void updatePorts(Ports * ports, SharedFile * sharedFile) {
 }   
    
 int main() {
+    DEBUG("Start\n");
 
     wiringPiSetup();
     
@@ -420,34 +348,21 @@ int main() {
     Ports currPorts;
     initPorts(&currPorts);
 
-    Sensors currSensors;
-    readSensors(&currSensors);
-
     SharedFile sharedFile;
-    initSharedFileStruct(&currPorts, &currSensors, &sharedFile);
+    initSharedFileStruct(&currPorts, &sharedFile);
 
     while(1) {
         
         if (isSharedFileWriteReady(&sharedFile)) {
-            readSensors(&currSensors);
-
-            if (areSensorsChanged(&currSensors, &sharedFile)) {
-                sharedFile.sensors = currSensors;
-
-                debug("update shared file\n");
-                if (lockSharedFile(&sharedFile) == OK) {
-
-                    writeSharedFile(&sharedFile);
-
-                    unlockSharedFile(&sharedFile);
-                }
+            if (sharedFile.lock == NOT_INITIALIZED) {
+                createSharedFile(&sharedFile);
             }
         }
 
         if (isSharedFileReadReady(&sharedFile)) {
             Status status = readSharedFilePorts(&sharedFile);
 
-            debug("status: %d, snd: %d\n", status, sharedFile.ports.sound);
+            DEBUG("status: %d, snd: %d\n", status, sharedFile.ports.sound);
 
             if (arePortsChanged(&currPorts, &sharedFile)) {
                 updatePorts(&currPorts, &sharedFile);
