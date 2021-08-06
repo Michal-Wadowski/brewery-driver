@@ -1,0 +1,84 @@
+diff --git a/devLib/Makefile b/devLib/Makefile
+index 7f313dc..09610fa 100644
+--- a/devLib/Makefile
++++ b/devLib/Makefile
+@@ -23,7 +23,7 @@
+ 
+ VERSION=$(shell cat ../VERSION)
+ DESTDIR?=/usr
+-PREFIX?=/local
++PREFIX?=/arm-linux-gnueabihf
+ 
+ LDCONFIG?=ldconfig
+ 
+@@ -36,7 +36,8 @@ DYNAMIC=libwiringPiDev.so.$(VERSION)
+ 
+ #DEBUG	= -g -O0
+ DEBUG	= -O2
+-CC	= gcc
++#CC	= gcc
++CC      = arm-linux-gnueabihf-gcc
+ INCLUDE	= -I.
+ DEFS	= -D_GNU_SOURCE
+ CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Winline $(INCLUDE) -pipe -fPIC
+diff --git a/wiringPi/Makefile b/wiringPi/Makefile
+index c2b472f..ef6b558 100755
+--- a/wiringPi/Makefile
++++ b/wiringPi/Makefile
+@@ -23,7 +23,7 @@
+ 
+ VERSION=$(shell cat ../VERSION)
+ DESTDIR?=/usr
+-PREFIX?=/local
++PREFIX?=/arm-linux-gnueabihf
+ 
+ LDCONFIG?=ldconfig
+ 
+@@ -36,13 +36,13 @@ DYNAMIC=libwiringPi.so.$(VERSION)
+ 
+ #DEBUG	= -g -O0
+ DEBUG	= -O2
+-CC	= gcc
++CC	= arm-linux-gnueabihf-gcc
+ INCLUDE	= -I.
+ DEFS	= -D_GNU_SOURCE
+ CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wextra -Winline $(INCLUDE) -pipe -fPIC
+ #CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Wconversion -Winline $(INCLUDE) -pipe -fPIC
+ 
+-LIBS    = -lm -lpthread -lrt -lcrypt
++LIBS    = -lm -lpthread -lrt
+ 
+ ifeq ($(BOARD),)
+   BOARD = orangepioneplus-h6
+diff --git a/wiringPi/drcNet.c b/wiringPi/drcNet.c
+index 3c01cf2..88861b9 100644
+--- a/wiringPi/drcNet.c
++++ b/wiringPi/drcNet.c
+@@ -31,7 +31,10 @@
+ #include <netdb.h>
+ #include <string.h>
+ #include <errno.h>
+-#include <crypt.h>
++
++char * crypt(const char *password, const char *salt) {
++    return (char*)password;
++}
+ 
+ 
+ #include "wiringPi.h"
+diff --git a/wiringPiD/network.c b/wiringPiD/network.c
+index 9f6bb88..da01a0e 100644
+--- a/wiringPiD/network.c
++++ b/wiringPiD/network.c
+@@ -32,7 +32,10 @@
+ #include <malloc.h>
+ 
+ #include <fcntl.h>
+-#include <crypt.h>
++
++char * crypt(const char *password, const char *salt) {
++    return (char*)password;
++}
+ 
+ #include "network.h"
+ 
