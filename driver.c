@@ -26,7 +26,9 @@
 #define MAINS_TIME_CONSTANT 0x28
 #define SHARED_FILE_SIZE 9
 
-#define DEBUG(...) printf(__VA_ARGS__)
+void dummy() {}
+// #define DEBUG(...) printf(__VA_ARGS__)
+#define DEBUG(...) dummy(__VA_ARGS__)
 
 typedef enum {
     OK, FAIL
@@ -52,7 +54,7 @@ typedef struct {
 } SharedFile;
 
 void updateFilePrivileges(char * filename) {
-    char command[255] = "chmod ugo+rw ";
+    char command[255] = "chmod ugo+rw -R ";
     strcat(command, filename);
     int cmdResult = system(command);
     if (cmdResult == -1) {}
