@@ -2,14 +2,14 @@ ifneq ($V,1)
 Q ?= @
 endif
 
-#DEBUG	= -g -O0
+
 DEBUG	= -O3
-CC	= gcc
+CC	= arm-linux-gnueabihf-gcc
 INCLUDE	= -I/usr/local/include
 CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
 
 LDFLAGS	= -L/usr/local/lib
-LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lcrypt -lrt
+LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lrt
 
 
 OBJ	=	$(SRC:.c=.o)
