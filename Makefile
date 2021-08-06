@@ -19,11 +19,12 @@ BINS	=	$(SRC:.c=)
 all:
 	$Q echo "[Build]"
 	$Q make driver
+	python3 build_checksum.py
 
 clean:
 	$Q echo "[Clean]"
-	$Q rm -f driver
+	$Q rm -f driver driver-*
 	
 install:
-	$Q sudo cp driver /usr/local/bin/driver
+	$Q sudo cp driver-* /usr/local/bin/driver
 
