@@ -23,7 +23,8 @@
 #define MOTOR_2_PIN 8
 #define MOTOR_3_PIN 20
 
-#define MAINS_TIME_CONSTANT 0x28
+//#define MAINS_TIME_CONSTANT 0x28
+#define MAINS_TIME_CONSTANT 0x0A
 #define SHARED_FILE_SIZE 9
 
 void dummy() {}
@@ -105,6 +106,12 @@ void initPorts(Ports * ports) {
 
     pinMode(MAINS_2_PIN, OUTPUT);    
     digitalWrite(MAINS_2_PIN, 0);
+
+
+    softPwmCreate(MAINS_1_PIN, 0, MAINS_TIME_CONSTANT*0xff);
+
+    softPwmCreate(MAINS_2_PIN, 0, MAINS_TIME_CONSTANT*0xff);
+
 
     ports->sound = 0;
     ports->mains1 = 0;
@@ -327,15 +334,13 @@ void updatePorts(Ports * ports, SharedFile * sharedFile) {
     if (sharedFile->ports.mains1 != ports->mains1) {
         ports->mains1 = sharedFile->ports.mains1;
 
-        softPwmStop(MAINS_1_PIN);
-        softPwmCreate(MAINS_1_PIN, MAINS_TIME_CONSTANT*ports->mains1, MAINS_TIME_CONSTANT*0xff);
+        softPwmWrite(MAINS_1_PIN, MAINS_TIME_CONSTANT*ports->mains1);
     }
 
     if (sharedFile->ports.mains2 != ports->mains2) {
         ports->mains2 = sharedFile->ports.mains2;
 
-        softPwmStop(MAINS_2_PIN);
-        softPwmCreate(MAINS_2_PIN, MAINS_TIME_CONSTANT*ports->mains2, MAINS_TIME_CONSTANT*0xff);
+        softPwmWrite(MAINS_2_PIN, MAINS_TIME_CONSTANT*ports->mains2);
     }
 }   
    
@@ -371,7 +376,7 @@ int main() {
             }
         }
 
-        delay(100);
+        delay(10);
     }
 
     return 0;
