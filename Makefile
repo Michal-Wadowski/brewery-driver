@@ -9,7 +9,7 @@ INCLUDE	= -I/usr/local/include
 CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
 
 LDFLAGS	= -L/usr/local/lib
-LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lrt
+LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lrt -lcrypt
 
 
 OBJ	=	$(SRC:.cpp=.o)
