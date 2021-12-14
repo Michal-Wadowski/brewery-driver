@@ -3,13 +3,13 @@ Q ?= @
 endif
 
 
-#DEBUG	= -O3
+#DEBUG	= -O3 -DDEBUG
 CXX	= arm-linux-gnueabihf-g++
 INCLUDE	= -I/usr/local/include
 CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
 
 LDFLAGS	= -L/usr/local/lib
-LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lrt -lcrypt
+LDLIBS    = TM1637Display.cpp -lwiringPi -lwiringPiDev -lpthread -lm -lrt -lcrypt
 
 
 OBJ	=	$(SRC:.cpp=.o)
@@ -19,12 +19,12 @@ BINS	=	$(SRC:.cpp=)
 all:
 	$Q echo "[Build]"
 	$Q make driver
-	python3 build_checksum.py
+#	python3 build_checksum.py
 
 clean:
 	$Q echo "[Clean]"
 	$Q rm -f driver driver-*
 
-install:
-	$Q sudo cp driver-* /usr/local/bin/driver
+#install:
+#	$Q sudo cp driver-* /usr/local/bin/driver
 

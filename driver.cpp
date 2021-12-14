@@ -8,6 +8,8 @@
 #include <wiringPi.h>
 #include <softPwm.h>
 
+#include "TM1637Display.h"
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <pthread.h>
@@ -23,13 +25,21 @@
 #define MOTOR_2_PIN 8
 #define MOTOR_3_PIN 20
 
+
+
+#define DISPLAY_1_CLK 17
+#define DISPLAY_1_DIO 22
+
+#define DISPLAY_2_CLK 23
+#define DISPLAY_2_DIO 25
+
 //#define MAINS_TIME_CONSTANT 0x28
 #define MAINS_TIME_CONSTANT 0x0A
 #define SHARED_FILE_SIZE 9
 
 void dummy(...) {}
-// #define DEBUG(...) printf(__VA_ARGS__)
-#define DEBUG(...) dummy(__VA_ARGS__)
+#define DEBUG(...) printf(__VA_ARGS__)
+// #define DEBUG(...) dummy(__VA_ARGS__)
 
 typedef enum {
     OK, FAIL
@@ -348,37 +358,52 @@ int main() {
     DEBUG("Start\n");
 
     wiringPiSetup();
+
+
+    DEBUG("Init ports\n");
     
-    pthread_t backgroundTaskId;
-    pthread_create(&backgroundTaskId, NULL, backgroundTask, NULL);
 
-    Ports currPorts;
-    initPorts(&currPorts);
+    pinMode(POWER_PIN, OUTPUT);    
+    digitalWrite(POWER_PIN, 0);
 
-    SharedFile sharedFile;
-    initSharedFileStruct(&currPorts, &sharedFile);
+    pinMode(MOTOR_1_PIN, OUTPUT);    
+    digitalWrite(MOTOR_1_PIN, 0);
+
+    pinMode(MAINS_1_PIN, OUTPUT);    
+    digitalWrite(MAINS_1_PIN, 0);
+
+    pinMode(MAINS_2_PIN, OUTPUT);    
+    digitalWrite(MAINS_2_PIN, 0);
+
+    softPwmCreate(MAINS_1_PIN, 0, MAINS_TIME_CONSTANT*0xff);
+
+    softPwmCreate(MAINS_2_PIN, 0, MAINS_TIME_CONSTANT*0xff);
+
+    softPwmWrite(MAINS_1_PIN, MAINS_TIME_CONSTANT*0x7f);
+    softPwmWrite(MAINS_2_PIN, MAINS_TIME_CONSTANT*0x7f);
+
+
+    TM1637Display display1 = TM1637Display(DISPLAY_1_CLK, DISPLAY_1_DIO);
+    display1.setBrightness(7);
+
+    TM1637Display display2 = TM1637Display(DISPLAY_2_CLK, DISPLAY_2_DIO);
+    display2.setBrightness(7);
+    
+    int i = 0;
 
     while(1) {
-        
-        if (isSharedFileWriteReady(&sharedFile)) {
-            if (sharedFile.lock == NOT_INITIALIZED) {
-                createSharedFile(&sharedFile);
-            }
-        }
+        digitalWrite(POWER_PIN, 0);
+        digitalWrite(MOTOR_1_PIN, 0);
 
-        if (isSharedFileReadReady(&sharedFile)) {
-            Status status = readSharedFilePorts(&sharedFile);
+        delay(500);
 
-            DEBUG("status: %d, snd: %d\n", status, sharedFile.ports.sound);
+        digitalWrite(POWER_PIN, 1);
+        digitalWrite(MOTOR_1_PIN, 1);
 
-            if (arePortsChanged(&currPorts, &sharedFile)) {
-                updatePorts(&currPorts, &sharedFile);
-            }
-        }
+        delay(500);
 
-        delay(10);
+        display1.showNumberDec(i++);
+        display2.showNumberDecEx(i++, 0b00100000);
     }
-
-    return 0;
 }
 
