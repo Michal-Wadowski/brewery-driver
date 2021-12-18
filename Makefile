@@ -1,30 +1,44 @@
-ifneq ($V,1)
-Q ?= @
+#INCLUDE	= -I/usr/local/include
+# CFLAGS	= -Wall $(INCLUDE) -Winline -pipe
+
+ifeq ($(REAL_IO),1)
+	override REAL_IO := TM1637Display.cpp -lwiringPi -lwiringPiDev -DREAL_IO
+	CXX	= arm-linux-gnueabihf-g++
 endif
 
+ifeq ($(BLUETOOTH),1)
+	override BLUETOOTH = -DBLUETOOTH
+endif
 
-#DEBUG	= -O3 -DDEBUG
-CXX	= arm-linux-gnueabihf-g++
-INCLUDE	= -I/usr/local/include
-CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
+ifeq ($(DEBUG),1)
+	override DEBUG = -DDEBUG
+endif
+
+override ARGS = $(REAL_IO) $(BLUETOOTH) $(DEBUG)
+
+
 
 LDFLAGS	= -L/usr/local/lib
-LDLIBS    = TM1637Display.cpp -lwiringPi -lwiringPiDev -lpthread -lm -lrt -lcrypt
+# LDLIBS    = TM1637Display.cpp -lwiringPi -lwiringPiDev -lpthread -lm -lrt -lcrypt
+LDLIBS    = -lpthread -lm -lrt -lcrypt
+
+# all:
+# 	@echo "[Build all]"
+# 	make driver
+# #	python3 build_checksum.py
 
 
-OBJ	=	$(SRC:.cpp=.o)
+%.o: %.cpp
+	$(CXX) $(ARGS) $(CFLAGS) $(INCLUDES) -c $? -o $@
 
-BINS	=	$(SRC:.cpp=)
+OBJECTS = demo.o connection.o socket.o digiport.o cJSON.o
 
-all:
-	$Q echo "[Build]"
-	$Q make driver
-#	python3 build_checksum.py
+demo: $(OBJECTS)
+	$(CXX) *.o $(ARGS) $(CFLAGS) $(LDLIBS) $(INCLUDES) -o $@
 
 clean:
-	$Q echo "[Clean]"
-	$Q rm -f driver driver-*
+	rm -f driver driver-* demo *.o
 
 #install:
-#	$Q sudo cp driver-* /usr/local/bin/driver
+#	sudo cp driver-* /usr/local/bin/driver
 
