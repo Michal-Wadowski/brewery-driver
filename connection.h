@@ -4,6 +4,8 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <cerrno>
+#include <stdio.h>
 
 #ifdef BLUETOOTH
 #include <bluetooth/bluetooth.h>
@@ -18,12 +20,20 @@
 #include "debug.h"
 #include "stream_processor.h"
 
+enum ConnectionMode {
+    BLUETOOTH_SOCKET = 1,
+    NETWORK_SOCKET = 2
+};
+
 class Connection {
 public:
-    Connection(int h_socket, StreamProcessor * sp);
+    Connection(int h_socket, StreamProcessor * sp, ConnectionMode mode);
     void accept();
+
+    bool closed;
 protected:
     StreamProcessor * stream_processor;
+    ConnectionMode mode;
     int h_socket;
     int client;
     ssize_t size_read;
