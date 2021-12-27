@@ -1,25 +1,24 @@
 #include "digiport.h"
 
+Digiport::Digiport() {
+    memset(virtualPinValues, 0, sizeof(virtualPinValues));
+}
+
 #ifdef REAL_IO
 
 void Digiport::pinMode(int pin, int mode) {
-
 }
 
-void Digiport::softPwmCreate(int pin, int duty, int max_duty) {
-
+void Digiport::softPwmCreate(int pin, int initialValue, int pwmRange) {
 }
 
-void Digiport::digitalWrite(int pin, int mode) {
-
+void Digiport::digitalWrite(int pin, int value) {
 }
 
 void Digiport::softPwmStop(int pin) {
-
 }
 
-void Digiport::softPwmWrite(int pin, int duty) {
-
+void Digiport::softPwmWrite(int pin, int value) {
 }
 
 #else
@@ -28,22 +27,34 @@ void Digiport::pinMode(int pin, int mode) {
     debug("pinMode %d, %d\n", pin, mode);
 }
 
-void Digiport::softPwmCreate(int pin, int duty, int max_duty) {
-    debug("softPwmCreate %d, %d, %d\n", pin, duty, max_duty);
+void Digiport::softPwmCreate(int pin, int initialValue, int pwmRange) {
+    debug("softPwmCreate %d, %d, %d\n", pin, initialValue, pwmRange);
+    virtualPinValues[pin] = initialValue;
 }
 
-void Digiport::digitalWrite(int pin, int mode) {
-    debug("digitalWrite %d, %d\n", pin, mode);
+void Digiport::digitalWrite(int pin, int value) {
+    debug("digitalWrite %d, %d\n", pin, value);
+    virtualPinValues[pin] = value;
 }
 
 void Digiport::softPwmStop(int pin) {
     debug("softPwmStop %d\n", pin);
 }
 
-void Digiport::softPwmWrite(int pin, int duty) {
-    debug("softPwmWrite %d, %d\n", pin, duty);
+void Digiport::softPwmWrite(int pin, int value) {
+    debug("softPwmWrite %d, %d\n", pin, value);
+    virtualPinValues[pin] = value;
 }
 
+int Digiport::digitalRead(int pin) {
+    debug("digitalRead %d\n", pin);
+    return virtualPinValues[pin];
+}
+
+int Digiport::softPwmRead(int pin) {
+    debug("softPwmRead %d\n", pin);
+    return virtualPinValues[pin];
+}
 
 void Digiport::displayInit(int channel, int pinClk, int pinDIO) {
     debug("displayInit %d, %d, %d\n", channel, pinClk, pinDIO);

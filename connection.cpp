@@ -53,14 +53,13 @@ void Connection::connection_thread_runner() {
     debug("Thread start!\n");
 
     while (1) {
-        debug("client: %d\n", client);
         size_read = read(client, buff, sizeof(buff));
         if (size_read <= 0) {
             debug("data read size: %ld\n", size_read);
             break;
         }
 
-        int result = stream_processor->process(buff, size_read);
+        int result = stream_processor->process(this);
         if (result < 0) {
             debug("process finished\n");
             break;

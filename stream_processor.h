@@ -1,10 +1,11 @@
 #ifndef __STREAM_PROCESSOR_H__
 #define __STREAM_PROCESSOR_H__
 
+#include "abstract_connection.h"
 
 class StreamProcessor {
 public:
-    virtual int process(char * data, int len) = 0;
+    virtual int process(AbstractConnection * ac) = 0;
 };
 
 #endif

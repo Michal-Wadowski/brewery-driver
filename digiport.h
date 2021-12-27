@@ -2,14 +2,20 @@
 #define __DIGIPORT_H__
 
 #include "debug.h"
+#include "string.h"
 
 class Digiport {
 public:
+    Digiport();
+
     void pinMode(int pin, int mode);
-    void softPwmCreate(int pin, int duty, int max_duty);
-    void digitalWrite(int pin, int mode);
+    void softPwmCreate(int pin, int initialValue, int pwmRange);
+    void digitalWrite(int pin, int value);
     void softPwmStop(int pin);
-    void softPwmWrite(int pin, int duty);
+    void softPwmWrite(int pin, int value);
+
+    int digitalRead(int pin);
+    int softPwmRead(int pin);
 
     void displayInit(int channel, int pinClk, int pinDIO);
     void setBrightness(int channel, int brightness, bool on = true);
@@ -18,6 +24,9 @@ public:
     void showNumberDec(int channel, int num, bool leading_zero = false, int length = 4, int pos = 0);
     void showNumberDecEx(int channel, int num, int dots = 0, bool leading_zero = false, int length = 4, int pos = 0);
     void showNumberHexEx(int channel, int num, int dots = 0, bool leading_zero = false, int length = 4, int pos = 0);
+
+protected:
+    int virtualPinValues[40];
 };
 
 #endif
