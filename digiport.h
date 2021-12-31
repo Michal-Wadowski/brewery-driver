@@ -3,6 +3,11 @@
 
 #include "debug.h"
 #include "string.h"
+#include <stdint.h>
+
+#ifdef REAL_IO
+#include "TM1637Display.h"
+#endif
 
 class Digiport {
 public:
@@ -19,7 +24,7 @@ public:
 
     void displayInit(int channel, int pinClk, int pinDIO);
     void setBrightness(int channel, int brightness, bool on = true);
-    void setSegments(int channel, const int segments[], int length = 4, int pos = 0);
+    void setSegments(int channel, const uint8_t segments[], int length = 4, int pos = 0);
     void clear(int channel);
     void showNumberDec(int channel, int num, bool leading_zero = false, int length = 4, int pos = 0);
     void showNumberDecEx(int channel, int num, int dots = 0, bool leading_zero = false, int length = 4, int pos = 0);
@@ -27,6 +32,10 @@ public:
 
 protected:
     int virtualPinValues[40];
+
+#ifdef REAL_IO
+    TM1637Display * displayArray[5];
+#endif
 };
 
 #endif

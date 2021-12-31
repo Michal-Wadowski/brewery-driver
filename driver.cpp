@@ -1,409 +1,437 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <stdbool.h>
-#include <limits.h>
+#ifdef BLUETOOTH
+#define EXT_CHANNEL 22
+#define EXT_MODE ConnectionMode::BLUETOOTH_SOCKET
+#else
+#define EXT_CHANNEL 2222
+#define EXT_MODE ConnectionMode::NETWORK_SOCKET
+#endif
 
-#include <wiringPi.h>
-#include <softPwm.h>
+#define HOST_CHANNEL 1111
 
-#include "TM1637Display.h"
+#include "debug.h"
+#include "connection.h"
+#include "socket.h"
+#include "digiport.h"
 
-#include <unistd.h>
-#include <sys/stat.h>
-#include <pthread.h>
+#include "cJSON.h"
 
-#define SHARED_FILE_PATH "/dev/shm/driver.bin"
+#include "stream_processor.h"
 
-#define SOUND_PIN 2
-#define POWER_PIN 7
-#define MAINS_1_PIN 5
-#define MAINS_2_PIN 13
+#include <arpa/inet.h>
+#include <sstream>
 
-#define MOTOR_1_PIN 19
-#define MOTOR_2_PIN 8
-#define MOTOR_3_PIN 20
+void executeBluetooth(cJSON * json, AbstractConnection * ac) {
+    
+    cJSON * command = cJSON_GetObjectItemCaseSensitive(json, "command");
+    if (command != NULL) {
+
+        cJSON * body = cJSON_Duplicate(json, true);
+        cJSON_DeleteItemFromObject(body, "command");
+        char * requestBody = cJSON_Print(body);
+        cJSON_Delete(body);
+
+        
+        
+
+        std::string commandName = command->valuestring;
+
+        debug("bluetooth command: %s\n", commandName.c_str());
+
+        std::size_t dotPos = commandName.find(".");
+        std::string controller = commandName.substr(0, dotPos);
+        controller[0] = std::tolower(controller[0]);
+        if (dotPos > 0)
+        {
+            std::string secondPart = commandName.substr(dotPos + 1);
+            std::string path = "/" + controller + "/" + secondPart;
+
+            
+            std::string bodySizeStr = std::to_string(strlen(requestBody));
+            std::string request = "POST " + 
+                path + " HTTP/1.0\r\nHost: localhost\r\nContent-type: application/json\r\nContent-length: " +
+                bodySizeStr +
+                "\r\nConnection: Close\r\n\r\n" +
+                requestBody;
+
+            free(requestBody);
 
 
+            int sock = 0, valread;
+            struct sockaddr_in serv_addr;
+            char buffer[1024] = {0};
+            if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+            {
+                perror("\n Socket creation error \n");
+                return;
+            }
+        
+            serv_addr.sin_family = AF_INET;
+            serv_addr.sin_port = htons(8080);
+            
+            // Convert IPv4 and IPv6 addresses from text to binary form
+            if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0) 
+            {
+                close(sock);
+                perror("\nInvalid address/ Address not supported \n");
+                return;
+            }
+        
+            if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+            {
+                close(sock);
+                perror("\nConnection Failed \n");
+                return;
+            }
+            
+            int req_written = write(sock , request.c_str() , strlen(request.c_str()));
+            
+            valread = recv( sock , buffer, 1024, 0);
+            close(sock);
 
-#define DISPLAY_1_CLK 17
-#define DISPLAY_1_DIO 22
+            std::string bufferStr = buffer;
+            std::size_t bodyPos = bufferStr.find("\r\n\r\n");
 
-#define DISPLAY_2_CLK 23
-#define DISPLAY_2_DIO 25
+            if (bodyPos > 0) {
+                std::string responseBody = bufferStr.substr(bodyPos + 4) + "\n";
 
-//#define MAINS_TIME_CONSTANT 0x28
-#define MAINS_TIME_CONSTANT 0x0A
-#define SHARED_FILE_SIZE 9
-
-void dummy(...) {}
-#define DEBUG(...) printf(__VA_ARGS__)
-// #define DEBUG(...) dummy(__VA_ARGS__)
-
-typedef enum {
-    OK, FAIL
-} Status;
-
-typedef struct {
-    bool power;
-    bool motor1;
-    bool motor2;
-    bool motor3;
-    u_int16_t sound;
-    u_int8_t mains1;
-    u_int8_t mains2;
-} Ports;
-
-typedef enum {
-    NOT_INITIALIZED, IDLE, CONTROLLER_LOCK
-} Lock;
-
-typedef struct {
-    u_int8_t lock;
-    Ports ports;
-} SharedFile;
-
-void updateFilePrivileges(const char * filename) {
-    char command[255] = "chmod ugo+rw -R ";
-    strcat(command, filename);
-    int cmdResult = system(command);
-    if (cmdResult == -1) {}
+                int resp_written = write(ac->client, responseBody.c_str(), responseBody.size());
+            }
+        } else {
+            free(requestBody);
+        }
+    }
 }
 
-void* backgroundTask(void* args) {
-    while(1) {
-        updateFilePrivileges("/bluetooth");
-        delay(100);
+
+
+class ExternalProcessor : public StreamProcessor {
+    virtual int process(AbstractConnection * ac);
+};
+
+int ExternalProcessor::process(AbstractConnection * ac) {
+    ac->buff[ac->size_read] = 0;
+
+    std::stringstream ss(ac->buff);
+    std::string part;
+
+    while(std::getline(ss, part, '\n')){
+        cJSON *json = cJSON_Parse(part.c_str());
+
+        if (json == NULL) {
+            debug("JSON parsing Error\n");
+            return -1;
+        }
+
+        executeBluetooth(json, ac);
+
+        delete json;
     }
+    
+    return 0;
+};
+
+
+
+
+
+Digiport digiport = Digiport();
+
+cJSON * pinMode(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "pinMode") {
+        debug("function: pinMode\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 2) {
+            int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int mode = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            
+            digiport.pinMode(pin, mode);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
+    }
+
     return NULL;
 }
 
-Status readSharedFile(SharedFile * sharedFile) {
-    if (access(SHARED_FILE_PATH, F_OK) == 0) {
-        return FAIL;
-    } else {
-        sharedFile->lock = NOT_INITIALIZED;
-        return OK;
-    }
-}
-
-void initPorts(Ports * ports) {
-    DEBUG("Init ports\n");
-
-    pinMode(POWER_PIN, OUTPUT);    
-    digitalWrite(POWER_PIN, 0);
-
-    pinMode(MOTOR_1_PIN, OUTPUT);    
-    digitalWrite(MOTOR_1_PIN, 0);
-
-    pinMode(MOTOR_2_PIN, OUTPUT);    
-    digitalWrite(MOTOR_2_PIN, 0);
-
-    pinMode(MOTOR_3_PIN, OUTPUT);    
-    digitalWrite(MOTOR_3_PIN, 0);
-
-    ports->power = 0;
-    ports->motor1 = 0;
-    ports->motor2 = 0;
-    ports->motor3 = 0;
-
-    pinMode(SOUND_PIN, OUTPUT);    
-    digitalWrite(SOUND_PIN, 0);
-
-    pinMode(MAINS_1_PIN, OUTPUT);    
-    digitalWrite(MAINS_1_PIN, 0);
-
-    pinMode(MAINS_2_PIN, OUTPUT);    
-    digitalWrite(MAINS_2_PIN, 0);
-
-
-    softPwmCreate(MAINS_1_PIN, 0, MAINS_TIME_CONSTANT*0xff);
-
-    softPwmCreate(MAINS_2_PIN, 0, MAINS_TIME_CONSTANT*0xff);
-
-
-    ports->sound = 0;
-    ports->mains1 = 0;
-    ports->mains2 = 0;
-}
-
-bool isSharedFileWriteReady(SharedFile * sharedFile) {
-    if (access(SHARED_FILE_PATH, F_OK) == 0) {
-
-        FILE * fileHandle = fopen(SHARED_FILE_PATH, "rb");
-        if (fileHandle == NULL) {
-            return false;
-        }
-        u_int8_t lock;
-        int readSize = fread(&lock, sizeof(lock), 1, fileHandle);
-        if (readSize != 1) { // if file empty
-            DEBUG("File empty\n");
-            lock = NOT_INITIALIZED;
-        }
-
-        // if lock invalid
-        if (lock != NOT_INITIALIZED && lock != IDLE && lock != CONTROLLER_LOCK
-        ) {
-            DEBUG("NOT_INITIALIZED (%d)\n", lock);
-            lock = NOT_INITIALIZED;
-        }
-
-        // if size invalid
-        fseek(fileHandle, 0, SEEK_END);
-        if (ftell(fileHandle) != SHARED_FILE_SIZE) {
-            DEBUG("file size: %ld\n", ftell(fileHandle));
-            lock = NOT_INITIALIZED;
-        }
-
-        fclose(fileHandle);
-
-        sharedFile->lock = lock;
-
-        bool isReady = (lock == IDLE || lock == NOT_INITIALIZED);
-
-        DEBUG("is write ready: %d, lock: %d\n", isReady, lock);
-
-        return isReady;
-    } else {
-        sharedFile->lock = NOT_INITIALIZED;
-        return true;
-    }
-}
-
-void initSharedFileStruct(Ports * ports, SharedFile * sharedFile) {
-    DEBUG("initSharedFileStruct\n");
-
-    sharedFile->lock = IDLE;
-
-    sharedFile->ports = *ports;
-}
-
-void dumpSharedFileStruct(SharedFile * sharedFile, FILE * fileHandle) {
-    fwrite(&sharedFile->lock, sizeof(sharedFile->lock), 1, fileHandle);
-
-    fwrite(&sharedFile->ports.power, sizeof(sharedFile->ports.power), 1, fileHandle);
-
-    fwrite(&sharedFile->ports.motor1, sizeof(sharedFile->ports.motor1), 1, fileHandle);
-    fwrite(&sharedFile->ports.motor2, sizeof(sharedFile->ports.motor2), 1, fileHandle);
-    fwrite(&sharedFile->ports.motor3, sizeof(sharedFile->ports.motor3), 1, fileHandle);
-
-    fwrite(&sharedFile->ports.sound, sizeof(sharedFile->ports.sound), 1, fileHandle);
-
-    fwrite(&sharedFile->ports.mains1, sizeof(sharedFile->ports.mains1), 1, fileHandle);
-    fwrite(&sharedFile->ports.mains2, sizeof(sharedFile->ports.mains2), 1, fileHandle);
-}
-
-Status createSharedFile(SharedFile * sharedFile) {
-    DEBUG("Create shared file!!!\n");
-
-    FILE * newFileHandle = fopen(SHARED_FILE_PATH, "w");
-    if (newFileHandle == NULL) {
-        DEBUG("Cant create file...\n");
-        return FAIL;
-    }
-
-    sharedFile->lock = IDLE;
-    dumpSharedFileStruct(sharedFile, newFileHandle);
-
-    fclose(newFileHandle);
-
-    updateFilePrivileges(SHARED_FILE_PATH);
-
-    return OK;
-}
-
-bool isSharedFileReadReady(SharedFile * sharedFile) {
-    if (access(SHARED_FILE_PATH, F_OK) == 0) {
-
-        FILE * fileHandle = fopen(SHARED_FILE_PATH, "rb");
-        if (fileHandle == NULL) {
-            return false;
-        }
-        u_int8_t lock;
-        int readSize = fread(&lock, sizeof(lock), 1, fileHandle);
-        if (readSize != 1) {
-            return false;
-        }
-        fclose(fileHandle);
-
-        bool isReady = (lock != CONTROLLER_LOCK && lock != NOT_INITIALIZED);
-
-        DEBUG("is read ready: %d, lock: %d\n", isReady, lock);
-
-        return isReady;
-    } else {
-        return false;
-    }
-}
-
-Status readSharedFilePorts(SharedFile * sharedFile) {
-    FILE * fileHandle = fopen(SHARED_FILE_PATH, "rb");
-    if (fileHandle == NULL) {
-        DEBUG("Cant read file...\n");
-        return FAIL;
-    }
-
-    fseek(fileHandle, sizeof(sharedFile->lock), SEEK_SET);
-
-
-    if (fread(&sharedFile->ports.power, sizeof(sharedFile->ports.power), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-
-    if (fread(&sharedFile->ports.motor1, sizeof(sharedFile->ports.motor1), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-    if (fread(&sharedFile->ports.motor2, sizeof(sharedFile->ports.motor2), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-    if (fread(&sharedFile->ports.motor3, sizeof(sharedFile->ports.motor3), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-
-    if (fread(&sharedFile->ports.sound, sizeof(sharedFile->ports.sound), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-
-    if (fread(&sharedFile->ports.mains1, sizeof(sharedFile->ports.mains1), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-    if (fread(&sharedFile->ports.mains2, sizeof(sharedFile->ports.mains2), 1, fileHandle) != 1) {
-        return FAIL;
-    }
-
-    fclose(fileHandle);
-
-    return OK;
-}
-
-bool arePortsChanged(Ports * ports, SharedFile * sharedFile) {
-    if (sharedFile->ports.power != ports->power) {
-        return true;
-    }
-
-    if (sharedFile->ports.motor1 != ports->motor1) {
-        return true;
-    }
-
-    if (sharedFile->ports.motor2 != ports->motor2) {
-        return true;
-    }
-
-    if (sharedFile->ports.motor3 != ports->motor3) {
-        return true;
-    }
-
-    if (sharedFile->ports.sound != ports->sound) {
-        return true;
-    }
-
-    if (sharedFile->ports.mains1 != ports->mains1) {
-        return true;
-    }
-
-    if (sharedFile->ports.mains2 != ports->mains2) {
-        return true;
-    }
-
-    return false;
-}
-
-void updatePorts(Ports * ports, SharedFile * sharedFile) {
-    DEBUG("Updating ports!\n");
-
-    if (sharedFile->ports.power != ports->power) {
-        ports->power = sharedFile->ports.power;
-        digitalWrite(POWER_PIN, ports->power);
-    }
-
-    if (sharedFile->ports.motor1 != ports->motor1) {
-        ports->motor1 = sharedFile->ports.motor1;
-        digitalWrite(MOTOR_1_PIN, ports->motor1);
-    }
-
-    if (sharedFile->ports.motor2 != ports->motor2) {
-        ports->motor2 = sharedFile->ports.motor2;
-        digitalWrite(MOTOR_2_PIN, ports->motor2);
-    }
-
-    if (sharedFile->ports.motor3 != ports->motor3) {
-        ports->motor3 = sharedFile->ports.motor3;
-        digitalWrite(MOTOR_3_PIN, ports->motor3);
-    }
-
-    DEBUG("SOUND: %d, \n", sharedFile->ports.sound);
-
-    if (sharedFile->ports.sound != ports->sound) {
-        ports->sound = sharedFile->ports.sound;
+cJSON * softPwmCreate(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "softPwmCreate") {
+        debug("function: softPwmCreate\n");
         
-        softPwmStop(SOUND_PIN);
-        softPwmCreate(SOUND_PIN, ports->sound / 2, ports->sound);
+        if (cJSON_GetArraySize(argumentsArray) == 3) {
+            int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int initialValue = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            int pwmRange = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
+            
+            digiport.softPwmCreate(pin, initialValue, pwmRange);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
     }
 
-    if (sharedFile->ports.mains1 != ports->mains1) {
-        ports->mains1 = sharedFile->ports.mains1;
+    return NULL;
+}
 
-        softPwmWrite(MAINS_1_PIN, MAINS_TIME_CONSTANT*ports->mains1);
+cJSON * displayInit(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "displayInit") {
+        debug("function: displayInit\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 3) {
+            int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int pinClk = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            int pinDIO = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
+            
+            digiport.displayInit(channel, pinClk, pinDIO);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
     }
 
-    if (sharedFile->ports.mains2 != ports->mains2) {
-        ports->mains2 = sharedFile->ports.mains2;
+    return NULL;
+}
 
-        softPwmWrite(MAINS_2_PIN, MAINS_TIME_CONSTANT*ports->mains2);
+
+
+cJSON * digitalWrite(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "digitalWrite") {
+        debug("function: digitalWrite\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 2) {
+            int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int value = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            
+            digiport.digitalWrite(pin, value);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
     }
-}   
-   
-int main() {
-    DEBUG("Start\n");
 
-    wiringPiSetup();
+    return NULL;
+}
 
-
-    DEBUG("Init ports\n");
+cJSON * softPwmWrite(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "softPwmWrite") {
     
+        if (cJSON_GetArraySize(argumentsArray) == 2) {
+            int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int value = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            
+            digiport.softPwmWrite(pin, value);
 
-    pinMode(POWER_PIN, OUTPUT);    
-    digitalWrite(POWER_PIN, 0);
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
+    }
 
-    pinMode(MOTOR_1_PIN, OUTPUT);    
-    digitalWrite(MOTOR_1_PIN, 0);
+    return NULL;
+}
 
-    pinMode(MAINS_1_PIN, OUTPUT);    
-    digitalWrite(MAINS_1_PIN, 0);
+cJSON * digitalRead(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "digitalRead") {        
+        if (cJSON_GetArraySize(argumentsArray) == 1) {
+            int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            
+            int value = digiport.digitalRead(pin);
 
-    pinMode(MAINS_2_PIN, OUTPUT);    
-    digitalWrite(MAINS_2_PIN, 0);
+            cJSON * response = cJSON_CreateNumber(value);
+            return response;
+        }
+    }
 
-    softPwmCreate(MAINS_1_PIN, 0, MAINS_TIME_CONSTANT*0xff);
+    return NULL;
+}
 
-    softPwmCreate(MAINS_2_PIN, 0, MAINS_TIME_CONSTANT*0xff);
+cJSON * softPwmRead(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "softPwmRead") {
+        if (cJSON_GetArraySize(argumentsArray) == 1) {
+            int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            
+            int value = digiport.softPwmRead(pin);
 
-    softPwmWrite(MAINS_1_PIN, MAINS_TIME_CONSTANT*0x7f);
-    softPwmWrite(MAINS_2_PIN, MAINS_TIME_CONSTANT*0x7f);
+            cJSON * response = cJSON_CreateNumber(value);
+            return response;
+        }
+    }
 
+    return NULL;
+}
 
-    TM1637Display display1 = TM1637Display(DISPLAY_1_CLK, DISPLAY_1_DIO);
-    display1.setBrightness(7);
-
-    TM1637Display display2 = TM1637Display(DISPLAY_2_CLK, DISPLAY_2_DIO);
-    display2.setBrightness(7);
-    
-    int i = 0;
-
-    while(1) {
-        digitalWrite(POWER_PIN, 0);
-        digitalWrite(MOTOR_1_PIN, 0);
-
-        delay(500);
-
-        digitalWrite(POWER_PIN, 1);
-        digitalWrite(MOTOR_1_PIN, 1);
-
-        delay(500);
-
-        display1.showNumberDec(i++);
-        display2.showNumberDecEx(i++, 0b00100000);
+void addResponseIfAny(cJSON * commandResp, cJSON * response, cJSON * responseArr) {
+    if (response != NULL) {
+        cJSON_AddItemToObject(commandResp, "response", response);
+        cJSON_AddItemToArray(responseArr, commandResp);
     }
 }
 
+void executeHost(cJSON * json, AbstractConnection * ac) {
+    
+    cJSON * commands = cJSON_GetObjectItemCaseSensitive(json, "commands");
+    if (commands != NULL) {
+        cJSON * responseArr = cJSON_CreateArray();
+
+        cJSON * command = NULL;
+        cJSON_ArrayForEach(command, commands)
+        {
+            cJSON * functionNameC = cJSON_GetObjectItemCaseSensitive(command, "function");
+
+            if (functionNameC != NULL) {
+                std::string functionName = functionNameC->valuestring;
+                cJSON * argumentsArray = cJSON_GetObjectItemCaseSensitive(command, "arguments");
+                cJSON * commandResp = cJSON_Duplicate(command, true);
+                cJSON * response;
+
+                response = pinMode(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = softPwmCreate(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = displayInit(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = digitalWrite(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = softPwmWrite(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = digitalRead(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = softPwmRead(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+            }
+        }
+
+        if (cJSON_GetArraySize(responseArr) > 0) {
+            char * responseStr = cJSON_PrintUnformatted(responseArr);
+
+            std::string respStr = responseStr;
+            respStr +=  + "\n";
+            free(responseStr);
+
+            if (ac != NULL) {
+                write(ac->client, respStr.c_str(), strlen(respStr.c_str()));
+            } else {
+                debug("%s\n", responseStr);
+            }
+
+            
+        }
+        cJSON_Delete(responseArr);
+    }
+}
+
+
+
+class HostExecutor : public StreamProcessor {
+    virtual int process(AbstractConnection * ac);
+};
+
+int HostExecutor::process(AbstractConnection * ac) {
+    ac->buff[ac->size_read] = 0;
+
+    std::stringstream ss(ac->buff);
+    std::string part;
+
+    while(std::getline(ss, part, '\n')){
+
+        cJSON *json = cJSON_Parse(part.c_str());
+
+        if (json == NULL) {
+            debug("JSON parsing Error\n");
+            return -1;
+        }
+
+        executeHost(json, ac);
+
+        delete json;
+    }
+    
+    return 0;
+};
+
+
+
+void * bluetooth_processor_callback(void * args) {
+    ExternalProcessor ep = ExternalProcessor();
+    Socket sock = Socket(EXT_CHANNEL, EXT_MODE);
+    sock.run(&ep);
+    return NULL;
+}
+
+void * host_executor_callback(void * args) {
+    HostExecutor he = HostExecutor();
+    Socket sock = Socket(HOST_CHANNEL, ConnectionMode::NETWORK_SOCKET);
+    sock.run(&he);
+    return NULL;
+}
+
+
+
+int main() {
+
+
+    pthread_t custom_processor_thread;
+    pthread_create(&custom_processor_thread, NULL, bluetooth_processor_callback, NULL);
+
+
+    pthread_t host_executor_thread;
+    pthread_create(&host_executor_thread, NULL, host_executor_callback, NULL);
+    pthread_join(host_executor_thread, NULL);
+
+
+    // // Memory check / primitive tests:
+    // for (int i = 0; i < 20000000; i++) {
+    //     cJSON *json = cJSON_Parse("{\"commands\":[\
+    //         {\"function\":\"pinMode\",\"arguments\":[7, 1]},\
+    //         {\"function\":\"softPwmCreate\",\"arguments\":[8, 0, 1000]},\
+    //         {\"function\":\"displayInit\",\"arguments\":[0, 15, 16]},\
+    //         {\"function\":\"digitalWrite\",\"arguments\":[7, 1]},\
+    //         {\"function\":\"softPwmWrite\",\"arguments\":[8, 500]},\
+    //         {\"function\":\"digitalRead\",\"arguments\":[7]},\
+    //         {\"function\":\"softPwmRead\",\"arguments\":[8]}\
+    //     ]}");
+
+    //     if (json == NULL) {
+    //         debug("JSON parsing Error\n");
+    //         return -1;
+    //     }
+
+    //     executeHost(json, NULL);
+
+    //     cJSON_Delete(json);
+    // }
+
+    // for (int i = 0; i < 20000000; i++) {
+
+    //     char data[] = "{\"command\":\"Brewing.getBrewingState\",\"commandId\":3}";
+    //     cJSON *json = cJSON_Parse(data);
+
+    //     if (json == NULL) {
+    //         debug("JSON parsing Error\n");
+    //         return -1;
+    //     }
+
+    //     executeBluetooth(json, NULL);
+
+    //     cJSON_Delete(json);
+
+    //     usleep(100000);
+    // }
+
+
+
+
+    // char data[] = "{\"command\":\"Brewing.getBrewingState\",\"commandId\":32}{\"command\":\"Brewing.getBrewingState\",\"commandId\":33}";
+    // cJSON *json = cJSON_Parse(data);
+    // if (json == NULL) {
+    //     debug("JSON parsing Error\n");
+    //     return -1;
+    // }
+    
+    return 0;
+}
