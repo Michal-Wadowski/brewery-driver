@@ -3,7 +3,7 @@ FROM ubuntu:18.04
 COPY . /driver
 
 RUN apt update
-RUN apt install -y git gcc-arm-linux-gnueabihf make python3
+RUN apt install -y git gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf make python3
 
 RUN git clone https://github.com/orangepi-xunlong/wiringOP
 WORKDIR wiringOP
@@ -20,3 +20,4 @@ RUN make && make install
 
 WORKDIR /driver
 
+RUN make clean && make BLUETOOTH=1 REAL_IO=1

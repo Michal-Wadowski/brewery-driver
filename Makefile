@@ -1,9 +1,12 @@
 #INCLUDE	= -I/usr/local/include
 # CFLAGS	= -Wall $(INCLUDE) -Winline -pipe
+CXX	= arm-linux-gnueabihf-g++
+
+OBJECTS = demo.o connection.o socket.o digiport.o cJSON.o
 
 ifeq ($(REAL_IO),1)
-	override REAL_IO := TM1637Display.cpp -lwiringPi -lwiringPiDev -DREAL_IO
-	CXX	= arm-linux-gnueabihf-g++
+	override REAL_IO := -lwiringPi -lwiringPiDev -DREAL_IO
+	override OBJECTS := $(OBJECTS) TM1637Display.o
 endif
 
 ifeq ($(BLUETOOTH),1)
@@ -30,8 +33,6 @@ LDLIBS    = -lpthread -lm -lrt -lcrypt
 
 %.o: %.cpp
 	$(CXX) $(ARGS) $(CFLAGS) $(INCLUDES) -c $? -o $@
-
-OBJECTS = demo.o connection.o socket.o digiport.o cJSON.o
 
 demo: $(OBJECTS)
 	$(CXX) *.o $(ARGS) $(CFLAGS) $(LDLIBS) $(INCLUDES) -o $@
