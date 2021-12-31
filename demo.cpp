@@ -17,13 +17,116 @@
 
 #include "stream_processor.h"
 
+#include <arpa/inet.h>
+#include <sstream>
+
+void executeBluetooth(cJSON * json, AbstractConnection * ac) {
+    
+    cJSON * command = cJSON_GetObjectItemCaseSensitive(json, "command");
+    if (command != NULL) {
+
+        cJSON * body = cJSON_Duplicate(json, true);
+        cJSON_DeleteItemFromObject(body, "command");
+        char * requestBody = cJSON_Print(body);
+        cJSON_Delete(body);
+
+        
+        
+
+        std::string commandName = command->valuestring;
+
+        debug("bluetooth command: %s\n", commandName.c_str());
+
+        std::size_t dotPos = commandName.find(".");
+        std::string controller = commandName.substr(0, dotPos);
+        controller[0] = std::tolower(controller[0]);
+        if (dotPos > 0)
+        {
+            std::string secondPart = commandName.substr(dotPos + 1);
+            std::string path = "/" + controller + "/" + secondPart;
+
+            
+            std::string bodySizeStr = std::to_string(strlen(requestBody));
+            std::string request = "POST " + 
+                path + " HTTP/1.0\r\nHost: localhost\r\nContent-type: application/json\r\nContent-length: " +
+                bodySizeStr +
+                "\r\nConnection: Close\r\n\r\n" +
+                requestBody;
+
+            free(requestBody);
+
+
+            int sock = 0, valread;
+            struct sockaddr_in serv_addr;
+            char buffer[1024] = {0};
+            if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+            {
+                perror("\n Socket creation error \n");
+                return;
+            }
+        
+            serv_addr.sin_family = AF_INET;
+            serv_addr.sin_port = htons(8080);
+            
+            // Convert IPv4 and IPv6 addresses from text to binary form
+            if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0) 
+            {
+                close(sock);
+                perror("\nInvalid address/ Address not supported \n");
+                return;
+            }
+        
+            if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+            {
+                close(sock);
+                perror("\nConnection Failed \n");
+                return;
+            }
+            
+            int req_written = write(sock , request.c_str() , strlen(request.c_str()));
+            
+            valread = recv( sock , buffer, 1024, 0);
+            close(sock);
+
+            std::string bufferStr = buffer;
+            std::size_t bodyPos = bufferStr.find("\r\n\r\n");
+
+            if (bodyPos > 0) {
+                std::string responseBody = bufferStr.substr(bodyPos + 4) + "\n";
+
+                int resp_written = write(ac->client, responseBody.c_str(), responseBody.size());
+            }
+        } else {
+            free(requestBody);
+        }
+    }
+}
+
+
+
 class ExternalProcessor : public StreamProcessor {
     virtual int process(AbstractConnection * ac);
 };
 
 int ExternalProcessor::process(AbstractConnection * ac) {
     ac->buff[ac->size_read] = 0;
-    debug("data: %s, size: %ld\n", ac->buff, ac->size_read);
+
+    std::stringstream ss(ac->buff);
+    std::string part;
+
+    while(std::getline(ss, part, '\n')){
+        cJSON *json = cJSON_Parse(part.c_str());
+
+        if (json == NULL) {
+            debug("JSON parsing Error\n");
+            return -1;
+        }
+
+        executeBluetooth(json, ac);
+
+        delete json;
+    }
+    
     return 0;
 };
 
@@ -111,8 +214,7 @@ cJSON * digitalWrite(std::string functionName, cJSON * argumentsArray) {
 
 cJSON * softPwmWrite(std::string functionName, cJSON * argumentsArray) {
     if (functionName == "softPwmWrite") {
-        debug("function: softPwmWrite\n");
-        
+    
         if (cJSON_GetArraySize(argumentsArray) == 2) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             int value = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
@@ -128,9 +230,7 @@ cJSON * softPwmWrite(std::string functionName, cJSON * argumentsArray) {
 }
 
 cJSON * digitalRead(std::string functionName, cJSON * argumentsArray) {
-    if (functionName == "digitalRead") {
-        debug("function: digitalRead\n");
-        
+    if (functionName == "digitalRead") {        
         if (cJSON_GetArraySize(argumentsArray) == 1) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             
@@ -146,8 +246,6 @@ cJSON * digitalRead(std::string functionName, cJSON * argumentsArray) {
 
 cJSON * softPwmRead(std::string functionName, cJSON * argumentsArray) {
     if (functionName == "softPwmRead") {
-        debug("function: softPwmRead\n");
-        
         if (cJSON_GetArraySize(argumentsArray) == 1) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             
@@ -172,8 +270,6 @@ void executeHost(cJSON * json, AbstractConnection * ac) {
     
     cJSON * commands = cJSON_GetObjectItemCaseSensitive(json, "commands");
     if (commands != NULL) {
-        debug("\nexecuteHost {\n");
-
         cJSON * responseArr = cJSON_CreateArray();
 
         cJSON * command = NULL;
@@ -211,22 +307,22 @@ void executeHost(cJSON * json, AbstractConnection * ac) {
         }
 
         if (cJSON_GetArraySize(responseArr) > 0) {
-            char * responseStr = cJSON_Print(responseArr);
+            char * responseStr = cJSON_PrintUnformatted(responseArr);
+
+            std::string respStr = responseStr;
+            respStr +=  + "\n";
+            free(responseStr);
 
             if (ac != NULL) {
-                write(ac->client, responseStr, strlen(responseStr));
+                write(ac->client, respStr.c_str(), strlen(respStr.c_str()));
             } else {
                 debug("%s\n", responseStr);
             }
 
-            free(responseStr);
+            
         }
         cJSON_Delete(responseArr);
-
-        debug("}\n");
     }
-
-   
 }
 
 
@@ -238,18 +334,23 @@ class HostExecutor : public StreamProcessor {
 int HostExecutor::process(AbstractConnection * ac) {
     ac->buff[ac->size_read] = 0;
 
-    cJSON *json = cJSON_Parse(ac->buff);
+    std::stringstream ss(ac->buff);
+    std::string part;
 
-    if (json == NULL) {
-        debug("JSON parsing Error\n");
-        return -1;
+    while(std::getline(ss, part, '\n')){
+
+        cJSON *json = cJSON_Parse(part.c_str());
+
+        if (json == NULL) {
+            debug("JSON parsing Error\n");
+            return -1;
+        }
+
+        executeHost(json, ac);
+
+        delete json;
     }
-
-    executeHost(json, ac);
-
-    delete json;
     
-
     return 0;
 };
 
@@ -273,44 +374,13 @@ void * host_executor_callback(void * args) {
 
 int main() {
 
-    
 
-
-
-    // cJSON *json = cJSON_Parse("[\
-    // {\"pinMode\": [0, 0]},\
-    // {\"softPwmCreate\":[0, 0, 0]},\
-    // {\"digitalWrite\":[0, 0]},\
-    // {\"softPwmStop\":[0]},\
-    // {\"softPwmWrite\":[0, 0]},\
-    // {\"displayInit\":[0, 0, 0]},\
-    // {\"setBrightness\": [0, 0, true]},\
-    // {\"setSegments\":[0, [0, 0, 0, 0], 4, 0]},\
-    // {\"clear\":[0]},\
-    // {\"showNumberDec\":[0, 0, false, 0, 0]},\
-    // {\"showNumberDecEx\":[0, 0, 0, false, 4, 0]},\
-    // {\"showNumberHexEx\":[0, 0, 0, false, 4, 0]}\
-    // ]");
-
-    // if (json == NULL) {
-    //     debug("JSON parsing Error\n");
-    //     return -1;
-    // }
-
-    // debug("%p\n", json);
-
-    // pthread_t custom_processor_thread;
-    // pthread_create(&custom_processor_thread, NULL, bluetooth_processor_callback, NULL);
-
-
-
-
-
+    pthread_t custom_processor_thread;
+    pthread_create(&custom_processor_thread, NULL, bluetooth_processor_callback, NULL);
 
 
     pthread_t host_executor_thread;
     pthread_create(&host_executor_thread, NULL, host_executor_callback, NULL);
-
     pthread_join(host_executor_thread, NULL);
 
 
@@ -336,7 +406,32 @@ int main() {
     //     cJSON_Delete(json);
     // }
 
+    // for (int i = 0; i < 20000000; i++) {
 
+    //     char data[] = "{\"command\":\"Brewing.getBrewingState\",\"commandId\":3}";
+    //     cJSON *json = cJSON_Parse(data);
+
+    //     if (json == NULL) {
+    //         debug("JSON parsing Error\n");
+    //         return -1;
+    //     }
+
+    //     executeBluetooth(json, NULL);
+
+    //     cJSON_Delete(json);
+
+    //     usleep(100000);
+    // }
+
+
+
+
+    // char data[] = "{\"command\":\"Brewing.getBrewingState\",\"commandId\":32}{\"command\":\"Brewing.getBrewingState\",\"commandId\":33}";
+    // cJSON *json = cJSON_Parse(data);
+    // if (json == NULL) {
+    //     debug("JSON parsing Error\n");
+    //     return -1;
+    // }
     
     return 0;
 }

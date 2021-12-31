@@ -23,6 +23,8 @@ void Digiport::softPwmWrite(int pin, int value) {
 
 #else
 
+#include <stdio.h>
+
 void Digiport::pinMode(int pin, int mode) {
     debug("pinMode %d, %d\n", pin, mode);
 }
@@ -47,12 +49,12 @@ void Digiport::softPwmWrite(int pin, int value) {
 }
 
 int Digiport::digitalRead(int pin) {
-    debug("digitalRead %d\n", pin);
+    debug("digitalRead %d (%d)\n", pin, virtualPinValues[pin]);
     return virtualPinValues[pin];
 }
 
 int Digiport::softPwmRead(int pin) {
-    debug("softPwmRead %d\n", pin);
+    debug("softPwmRead %d (%d)\n", pin, virtualPinValues[pin]);
     return virtualPinValues[pin];
 }
 
