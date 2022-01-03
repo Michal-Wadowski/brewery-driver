@@ -6,6 +6,8 @@
 #include <stdint.h>
 
 #ifdef REAL_IO
+#include <wiringPi.h>
+#include <softPwm.h>
 #include "TM1637Display.h"
 #endif
 

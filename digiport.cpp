@@ -11,28 +11,28 @@ Digiport::Digiport() {
 #ifdef REAL_IO
 
 void Digiport::pinMode(int pin, int mode) {
-    pinMode(pin, mode);
+    ::pinMode(pin, mode);
 }
 
 void Digiport::softPwmCreate(int pin, int initialValue, int pwmRange) {
-    softPwmCreate(pin, initialValue, pwmRange);
+    ::softPwmCreate(pin, initialValue, pwmRange);
 }
 
 void Digiport::digitalWrite(int pin, int value) {
-    digitalWrite(pin, value);
+    ::digitalWrite(pin, value);
 }
 
 void Digiport::softPwmStop(int pin) {
-    softPwmStop(pin);
+    ::softPwmStop(pin);
 }
 
 void Digiport::softPwmWrite(int pin, int value) {
     virtualPinValues[pin] = value;
-    softPwmWrite(pin, value);
+    ::softPwmWrite(pin, value);
 }
 
 int Digiport::digitalRead(int pin) {
-    return digitalRead(pin);
+    return ::digitalRead(pin);
 }
 
 int Digiport::softPwmRead(int pin) {
@@ -103,7 +103,7 @@ void Digiport::showNumberHexEx(int channel, int num, int dots, bool leading_zero
     if (channel < 0 || channel > sizeof(displayArray)) {
         return;
     }
-    
+
     if (displayArray[channel] != NULL) {
         displayArray[channel]->showNumberHexEx(num, dots, leading_zero, length, pos);
     }

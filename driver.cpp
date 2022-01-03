@@ -192,7 +192,84 @@ cJSON * displayInit(std::string functionName, cJSON * argumentsArray) {
     return NULL;
 }
 
+cJSON * setBrightness(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "setBrightness") {
+        debug("function: setBrightness\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 3) {
+            int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int brightness = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            bool on = cJSON_IsTrue(cJSON_GetArrayItem(argumentsArray, 2));
+            
+            digiport.setBrightness(channel, brightness, on);
 
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
+    }
+
+    return NULL;
+}
+
+cJSON * showNumberDec(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "showNumberDec") {
+        debug("function: showNumberDec\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 5) {
+            int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int num = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            bool leading_zero = cJSON_IsTrue(cJSON_GetArrayItem(argumentsArray, 2));
+            int length = cJSON_GetArrayItem(argumentsArray, 3)->valueint;
+            int pos = cJSON_GetArrayItem(argumentsArray, 4)->valueint;
+            
+            digiport.showNumberDec(channel, num, leading_zero, length, pos);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
+    }
+
+    return NULL;
+}
+
+cJSON * showNumberDecEx(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "showNumberDecEx") {
+        debug("function: showNumberDecEx\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 6) {
+            int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            int dots = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            int num = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
+            bool leading_zero = cJSON_IsTrue(cJSON_GetArrayItem(argumentsArray, 3));
+            int length = cJSON_GetArrayItem(argumentsArray, 4)->valueint;
+            int pos = cJSON_GetArrayItem(argumentsArray, 5)->valueint;
+            
+            digiport.showNumberDecEx(channel, num, dots, leading_zero, length, pos);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
+    }
+
+    return NULL;
+}
+
+cJSON * clear(std::string functionName, cJSON * argumentsArray) {
+    if (functionName == "showNumberDecEx") {
+        debug("function: showNumberDecEx\n");
+        
+        if (cJSON_GetArraySize(argumentsArray) == 1) {
+            int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
+            
+            digiport.clear(channel);
+
+            cJSON * response = cJSON_CreateNull();
+            return response;
+        }
+    }
+
+    return NULL;
+}
 
 cJSON * digitalWrite(std::string functionName, cJSON * argumentsArray) {
     if (functionName == "digitalWrite") {
@@ -289,9 +366,6 @@ void executeHost(cJSON * json, AbstractConnection * ac) {
                 response = softPwmCreate(functionName, argumentsArray);
                 addResponseIfAny(commandResp, response, responseArr);
 
-                response = displayInit(functionName, argumentsArray);
-                addResponseIfAny(commandResp, response, responseArr);
-
                 response = digitalWrite(functionName, argumentsArray);
                 addResponseIfAny(commandResp, response, responseArr);
 
@@ -303,6 +377,22 @@ void executeHost(cJSON * json, AbstractConnection * ac) {
 
                 response = softPwmRead(functionName, argumentsArray);
                 addResponseIfAny(commandResp, response, responseArr);
+
+                response = displayInit(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = setBrightness(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = showNumberDec(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = showNumberDecEx(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+
+                response = clear(functionName, argumentsArray);
+                addResponseIfAny(commandResp, response, responseArr);
+                
             }
         }
 
@@ -373,7 +463,9 @@ void * host_executor_callback(void * args) {
 
 
 int main() {
-
+#ifdef REAL_IO
+    wiringPiSetup();
+#endif
 
     pthread_t custom_processor_thread;
     pthread_create(&custom_processor_thread, NULL, bluetooth_processor_callback, NULL);

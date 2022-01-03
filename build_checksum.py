@@ -10,5 +10,6 @@ with open(filename, 'rb') as f:
 checksum = hex(zlib.crc32(content) & 0xffffffff)[2:]
 
 dst_filename = filename + '-' + checksum
+print("rename to " + dst_filename)
 rename(filename, dst_filename)
 
