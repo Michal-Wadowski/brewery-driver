@@ -38,14 +38,22 @@ void executeBluetooth(cJSON * json, AbstractConnection * ac) {
         debug("bluetooth command: %s\n", commandName.c_str());
 
         std::size_t dotPos = commandName.find(".");
-        std::string controller = commandName.substr(0, dotPos);
-        controller[0] = std::tolower(controller[0]);
+        
+        std::string path;
         if (dotPos > 0)
         {
+            std::string controller = commandName.substr(0, dotPos);
+            controller[0] = std::tolower(controller[0]);
             std::string secondPart = commandName.substr(dotPos + 1);
-            std::string path = "/" + controller + "/" + secondPart;
+            path = "/" + controller + "/" + secondPart;
+        } else {
+            std::size_t slashPos = commandName.find("/");
+            if (slashPos == 0) {
+                path = commandName;
+            }
+        }
 
-            
+        if (path.size() > 0) {
             std::string bodySizeStr = std::to_string(strlen(requestBody));
             std::string request = "POST " + 
                 path + " HTTP/1.0\r\nHost: localhost\r\nContent-type: application/json\r\nContent-length: " +

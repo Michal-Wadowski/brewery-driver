@@ -39,5 +39,5 @@ protected:
     TM1637Display * displayArray[5];
 #endif
 };
-
+        
 #endif
