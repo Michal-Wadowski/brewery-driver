@@ -40,7 +40,7 @@ void executeBluetooth(cJSON * json, AbstractConnection * ac) {
         std::size_t dotPos = commandName.find(".");
         
         std::string path;
-        if (dotPos > 0)
+        if (dotPos > 0 && dotPos != std::string::npos)
         {
             std::string controller = commandName.substr(0, dotPos);
             controller[0] = std::tolower(controller[0]);
@@ -99,7 +99,7 @@ void executeBluetooth(cJSON * json, AbstractConnection * ac) {
             std::string bufferStr = buffer;
             std::size_t bodyPos = bufferStr.find("\r\n\r\n");
 
-            if (bodyPos > 0) {
+            if (bodyPos > 0 && bodyPos != std::string::npos) {
                 std::string responseBody = bufferStr.substr(bodyPos + 4) + "\n";
 
                 int resp_written = write(ac->client, responseBody.c_str(), responseBody.size());
