@@ -238,8 +238,8 @@ cJSON * showNumberDecEx(std::string functionName, cJSON * argumentsArray) {
         
         if (cJSON_GetArraySize(argumentsArray) == 6) {
             int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
-            int dots = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
-            int num = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
+            int num = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
+            int dots = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
             bool leading_zero = cJSON_IsTrue(cJSON_GetArrayItem(argumentsArray, 3));
             int length = cJSON_GetArrayItem(argumentsArray, 4)->valueint;
             int pos = cJSON_GetArrayItem(argumentsArray, 5)->valueint;
@@ -255,8 +255,8 @@ cJSON * showNumberDecEx(std::string functionName, cJSON * argumentsArray) {
 }
 
 cJSON * clear(std::string functionName, cJSON * argumentsArray) {
-    if (functionName == "showNumberDecEx") {
-        debug("function: showNumberDecEx\n");
+    if (functionName == "clear") {
+        debug("function: clear\n");
         
         if (cJSON_GetArraySize(argumentsArray) == 1) {
             int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
