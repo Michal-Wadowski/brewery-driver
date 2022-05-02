@@ -1,12 +1,8 @@
-OBJECTS = connection.o socket.o digiport.o cJSON.o DigiPort.o Application.o ConnectionConsumer.o
-# OBJECTS = driver.o connection.o socket.o digiport.o cJSON.o DigiPort.o Application.o
-
-LDLIBS = -lpthread -lm -lrt -lcrypt
+OBJECTS = driver.o connection.o socket.o digiport.o cJSON.o native_integration.o
 
 ifeq ($(REAL_IO),1)
 	CXX	= arm-linux-gnueabihf-g++
-	override LDLIBS := $(LDLIBS) -lwiringPi -lwiringPiDev
-	override REAL_IO := -DREAL_IO
+	override REAL_IO := -lwiringPi -lwiringPiDev -DREAL_IO
 	override OBJECTS := $(OBJECTS) TM1637Display.o
 endif
 
@@ -25,12 +21,13 @@ ifndef JAVA_HOME
 endif
 
 LDFLAGS	= -L/usr/local/lib
+LDLIBS = -lpthread -lm -lrt -lcrypt
 INCLUDES = -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 
 all:
 	@echo "[Build all]"
 	make jni
-# 	make driver
+
 
 %.o: %.cpp
 	$(CXX) -fPIC $(ARGS) $(CFLAGS) $(INCLUDES) -c $? -o $@
@@ -38,8 +35,6 @@ all:
 jni: $(OBJECTS)
 	$(CXX) -shared -fPIC -o brewery_driver.so *.o -lc
 
-# driver: $(OBJECTS)
-# 	$(CXX) *.o $(ARGS) $(CFLAGS) $(LDLIBS) $(INCLUDES) -o $@
-
 clean:
 	rm -f *.so *.o
+
