@@ -1,3 +1,5 @@
+# docker image build . -t brewery-driver
+
 FROM ubuntu:18.04
 
 RUN apt-get update

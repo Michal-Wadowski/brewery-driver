@@ -142,7 +142,7 @@ int ExternalProcessor::process(AbstractConnection * ac) {
 
 
 
-Digiport digiport = Digiport();
+Digiport driverDigiport = Digiport();
 
 cJSON * pinMode(std::string functionName, cJSON * argumentsArray) {
     if (functionName == "pinMode") {
@@ -152,7 +152,7 @@ cJSON * pinMode(std::string functionName, cJSON * argumentsArray) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             int mode = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
             
-            digiport.pinMode(pin, mode);
+            driverDigiport.pinMode(pin, mode);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -171,7 +171,7 @@ cJSON * softPwmCreate(std::string functionName, cJSON * argumentsArray) {
             int initialValue = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
             int pwmRange = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
             
-            digiport.softPwmCreate(pin, initialValue, pwmRange);
+            driverDigiport.softPwmCreate(pin, initialValue, pwmRange);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -190,7 +190,7 @@ cJSON * displayInit(std::string functionName, cJSON * argumentsArray) {
             int pinClk = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
             int pinDIO = cJSON_GetArrayItem(argumentsArray, 2)->valueint;
             
-            digiport.displayInit(channel, pinClk, pinDIO);
+            driverDigiport.displayInit(channel, pinClk, pinDIO);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -209,7 +209,7 @@ cJSON * setBrightness(std::string functionName, cJSON * argumentsArray) {
             int brightness = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
             bool on = cJSON_IsTrue(cJSON_GetArrayItem(argumentsArray, 2));
             
-            digiport.setBrightness(channel, brightness, on);
+            driverDigiport.setBrightness(channel, brightness, on);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -230,7 +230,7 @@ cJSON * showNumberDec(std::string functionName, cJSON * argumentsArray) {
             int length = cJSON_GetArrayItem(argumentsArray, 3)->valueint;
             int pos = cJSON_GetArrayItem(argumentsArray, 4)->valueint;
             
-            digiport.showNumberDec(channel, num, leading_zero, length, pos);
+            driverDigiport.showNumberDec(channel, num, leading_zero, length, pos);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -252,7 +252,7 @@ cJSON * showNumberDecEx(std::string functionName, cJSON * argumentsArray) {
             int length = cJSON_GetArrayItem(argumentsArray, 4)->valueint;
             int pos = cJSON_GetArrayItem(argumentsArray, 5)->valueint;
             
-            digiport.showNumberDecEx(channel, num, dots, leading_zero, length, pos);
+            driverDigiport.showNumberDecEx(channel, num, dots, leading_zero, length, pos);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -269,7 +269,7 @@ cJSON * clear(std::string functionName, cJSON * argumentsArray) {
         if (cJSON_GetArraySize(argumentsArray) == 1) {
             int channel = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             
-            digiport.clear(channel);
+            driverDigiport.clear(channel);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -287,7 +287,7 @@ cJSON * digitalWrite(std::string functionName, cJSON * argumentsArray) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             int value = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
             
-            digiport.digitalWrite(pin, value);
+            driverDigiport.digitalWrite(pin, value);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -304,7 +304,7 @@ cJSON * softPwmWrite(std::string functionName, cJSON * argumentsArray) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             int value = cJSON_GetArrayItem(argumentsArray, 1)->valueint;
             
-            digiport.softPwmWrite(pin, value);
+            driverDigiport.softPwmWrite(pin, value);
 
             cJSON * response = cJSON_CreateNull();
             return response;
@@ -319,7 +319,7 @@ cJSON * digitalRead(std::string functionName, cJSON * argumentsArray) {
         if (cJSON_GetArraySize(argumentsArray) == 1) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             
-            int value = digiport.digitalRead(pin);
+            int value = driverDigiport.digitalRead(pin);
 
             cJSON * response = cJSON_CreateNumber(value);
             return response;
@@ -334,7 +334,7 @@ cJSON * softPwmRead(std::string functionName, cJSON * argumentsArray) {
         if (cJSON_GetArraySize(argumentsArray) == 1) {
             int pin = cJSON_GetArrayItem(argumentsArray, 0)->valueint;
             
-            int value = digiport.softPwmRead(pin);
+            int value = driverDigiport.softPwmRead(pin);
 
             cJSON * response = cJSON_CreateNumber(value);
             return response;
