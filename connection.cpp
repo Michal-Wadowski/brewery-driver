@@ -55,7 +55,7 @@ void Connection::connection_thread_runner() {
     while (1) {
         size_read = read(client, buff, sizeof(buff));
         if (size_read <= 0) {
-            debug("data read size: %ld\n", size_read);
+            debug("data read size: %d\n", size_read);
             break;
         }
 

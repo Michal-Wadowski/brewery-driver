@@ -1,20 +1,7 @@
-#include "jni/wadosm_breweryhost_DriverEntry.h"
 #include "jni/wadosm_breweryhost_DigiPort.h"
-#include <iostream>
 #include "digiport.h"
 
 Digiport * digiport = new Digiport();
-
-class Application {
-public:
-    Application() {
-#ifdef REAL_IO
-        wiringPiSetup();
-#endif
-    }
-};
-
-Application application = Application();
 
 JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_pinMode(JNIEnv *, jobject, jint pin, jint mode) {
     digiport->pinMode(pin, mode);

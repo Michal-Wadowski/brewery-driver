@@ -1,4 +1,5 @@
-OBJECTS = driver.o connection.o socket.o digiport.o cJSON.o brewery_driver.o
+OBJECTS = connection.o socket.o digiport.o cJSON.o DigiPort.o Application.o ConnectionConsumer.o
+# OBJECTS = driver.o connection.o socket.o digiport.o cJSON.o DigiPort.o Application.o
 
 LDLIBS = -lpthread -lm -lrt -lcrypt
 
@@ -29,13 +30,16 @@ INCLUDES = -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 all:
 	@echo "[Build all]"
 	make jni
-
+# 	make driver
 
 %.o: %.cpp
 	$(CXX) -fPIC $(ARGS) $(CFLAGS) $(INCLUDES) -c $? -o $@
 
 jni: $(OBJECTS)
 	$(CXX) -shared -fPIC -o brewery_driver.so *.o -lc
+
+# driver: $(OBJECTS)
+# 	$(CXX) *.o $(ARGS) $(CFLAGS) $(LDLIBS) $(INCLUDES) -o $@
 
 clean:
 	rm -f *.so *.o
