@@ -12,7 +12,7 @@ extern "C" {
  * Method:    pinMode
  * Signature: (II)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_pinMode
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_pinMode
   (JNIEnv *, jobject, jint, jint);
 
 /*
@@ -20,7 +20,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_pinMode
  * Method:    softPwmCreate
  * Signature: (III)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_softPwmCreate
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_softPwmCreate
   (JNIEnv *, jobject, jint, jint, jint);
 
 /*
@@ -28,7 +28,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_softPwmCreate
  * Method:    digitalWrite
  * Signature: (II)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_digitalWrite
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_digitalWrite
   (JNIEnv *, jobject, jint, jint);
 
 /*
@@ -36,7 +36,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_digitalWrite
  * Method:    softPwmStop
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_softPwmStop
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_softPwmStop
   (JNIEnv *, jobject, jint);
 
 /*
@@ -44,7 +44,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_softPwmStop
  * Method:    softPwmWrite
  * Signature: (II)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_softPwmWrite
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_softPwmWrite
   (JNIEnv *, jobject, jint, jint);
 
 /*
@@ -52,7 +52,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_softPwmWrite
  * Method:    digitalRead
  * Signature: (I)I
  */
-JNIEXPORT jint JNICALL Java_wadosm_breweryhost_DigiPort_digitalRead
+JNIEXPORT jint JNICALL Java_wadosm_breweryhost_DigiPortImpl_digitalRead
   (JNIEnv *, jobject, jint);
 
 /*
@@ -60,7 +60,7 @@ JNIEXPORT jint JNICALL Java_wadosm_breweryhost_DigiPort_digitalRead
  * Method:    softPwmRead
  * Signature: (I)I
  */
-JNIEXPORT jint JNICALL Java_wadosm_breweryhost_DigiPort_softPwmRead
+JNIEXPORT jint JNICALL Java_wadosm_breweryhost_DigiPortImpl_softPwmRead
   (JNIEnv *, jobject, jint);
 
 /*
@@ -68,7 +68,7 @@ JNIEXPORT jint JNICALL Java_wadosm_breweryhost_DigiPort_softPwmRead
  * Method:    displayInit
  * Signature: (III)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_displayInit
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_displayInit
   (JNIEnv *, jobject, jint, jint, jint);
 
 /*
@@ -76,7 +76,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_displayInit
  * Method:    setBrightness
  * Signature: (IIZ)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_setBrightness
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_setBrightness
   (JNIEnv *, jobject, jint, jint, jboolean);
 
 /*
@@ -84,7 +84,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_setBrightness
  * Method:    setSegments
  * Signature: (I[BII)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_setSegments
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_setSegments
   (JNIEnv *, jobject, jint, jbyteArray, jint, jint);
 
 /*
@@ -92,7 +92,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_setSegments
  * Method:    clear
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_clear
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_clear
   (JNIEnv *, jobject, jint);
 
 /*
@@ -100,7 +100,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_clear
  * Method:    showNumberDec
  * Signature: (IIZII)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_showNumberDec
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_showNumberDec
   (JNIEnv *, jobject, jint, jint, jboolean, jint, jint);
 
 /*
@@ -108,7 +108,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_showNumberDec
  * Method:    showNumberDecEx
  * Signature: (IIIZII)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_showNumberDecEx
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_showNumberDecEx
   (JNIEnv *, jobject, jint, jint, jint, jboolean, jint, jint);
 
 /*
@@ -116,7 +116,7 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_showNumberDecEx
  * Method:    showNumberHexEx
  * Signature: (IIIZII)V
  */
-JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPort_showNumberHexEx
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_showNumberHexEx
   (JNIEnv *, jobject, jint, jint, jint, jboolean, jint, jint);
 
 #ifdef __cplusplus
