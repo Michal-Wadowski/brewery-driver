@@ -4,5 +4,6 @@ demo
 .vscode
 *.o
 
+*.so
 /.idea/
 *.so
