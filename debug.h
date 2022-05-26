@@ -5,7 +5,7 @@ inline void dummy(...) {}
 #ifdef DEBUG
 #include <stdio.h>
 #include <stdlib.h>
-#define debug(...) do {printf(__VA_ARGS__); fflush(stdin);} while(0)
+#define debug(...) do {printf(__VA_ARGS__); fflush(stdout);} while(0)
 #else
 #define debug(...) dummy(__VA_ARGS__)
 #endif
