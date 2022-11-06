@@ -1,44 +1,39 @@
-#INCLUDE	= -I/usr/local/include
-# CFLAGS	= -Wall $(INCLUDE) -Winline -pipe
+OBJECTS = digiport.o DigiPort.o Application.o debug.o
 
-OBJECTS = driver.o connection.o socket.o digiport.o cJSON.o
+LDLIBS = -lpthread -lm -lrt -lcrypt
 
 ifeq ($(REAL_IO),1)
 	CXX	= arm-linux-gnueabihf-g++
-	override REAL_IO := -lwiringPi -lwiringPiDev -DREAL_IO
+	override LDLIBS := $(LDLIBS) -lwiringPi -lwiringPiDev
+	override REAL_IO := -DREAL_IO
 	override OBJECTS := $(OBJECTS) TM1637Display.o
 endif
 
-ifeq ($(BLUETOOTH),1)
-	override BLUETOOTH = -DBLUETOOTH
+override ARGS = $(REAL_IO)
+
+ifndef JAVA_HOME
+    JAVA_HOME = /usr/lib/jvm/java-11-openjdk-amd64
 endif
-
-ifeq ($(DEBUG),1)
-	override DEBUG = -DDEBUG
-endif
-
-override ARGS = $(REAL_IO) $(BLUETOOTH) $(DEBUG)
-
-
 
 LDFLAGS	= -L/usr/local/lib
-LDLIBS    = -lpthread -lm -lrt -lcrypt
+INCLUDES = -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 
 all:
-	@echo "[Build all]"
-	make driver
-	python3 build_checksum.py
+	@echo "[Build Orange Pi driver]"
+	make jni
 
+demo:
+	@echo "[Build demo driver]"
+	make jni-demo
 
 %.o: %.cpp
-	$(CXX) $(ARGS) $(CFLAGS) $(INCLUDES) -c $? -o $@
+	$(CXX) -fPIC $(ARGS) $(CFLAGS) $(INCLUDES) -c $? -o $@
 
-driver: $(OBJECTS)
-	$(CXX) *.o $(ARGS) $(CFLAGS) $(LDLIBS) $(INCLUDES) -o $@
+jni: $(OBJECTS)
+	$(CXX) -shared -fPIC -o brewery_driver.so *.o -lc
+
+jni-demo: $(OBJECTS)
+	$(CXX) -shared -fPIC -o brewery_driver_demo.so *.o -lc
 
 clean:
-	rm -f driver driver-* driver *.o
-
-install:
-	sudo cp driver-* /usr/local/bin/driver
-
+	rm -f *.so *.o

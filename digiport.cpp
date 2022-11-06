@@ -156,7 +156,7 @@ void Digiport::setSegments(int channel, const uint8_t segments[], int length, in
     debug("setSegments %d ", channel);
     
     for (int i = 0; i < length; i++) {
-        debug("%d ", segments[i]);
+        debug("[%d] ", segments[i]);
     }
 
     debug("%d %d\n", length, pos);
