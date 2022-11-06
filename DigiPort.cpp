@@ -72,3 +72,8 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_showNumberHexEx(
     JNIEnv *, jobject, jint channel, jint num, jint dots, jboolean leading_zero, jint length, jint pos) {
     digiport->showNumberHexEx(channel, num, dots, leading_zero, length, pos);
 }
+
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_debugEnable(
+    JNIEnv *, jobject, jboolean enable) {
+    debugEnabled = true;
+}

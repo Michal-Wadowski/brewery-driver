@@ -2,13 +2,13 @@
 
 FROM ubuntu:18.04
 
-RUN apt-get update
-RUN apt-get install -y git gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf make python3 libbluetooth-dev
+RUN apt-get update --fix-missing
+RUN apt-get install -y git gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf make python3
 
 RUN git clone https://github.com/orangepi-xunlong/wiringOP
 WORKDIR wiringOP
 
-COPY ./custom.patch /custom.patch 
+COPY ./custom.patch /custom.patch
 
 RUN git apply /custom.patch
 
@@ -26,4 +26,4 @@ COPY . /driver
 
 WORKDIR /driver
 
-RUN make clean && make BLUETOOTH=1 REAL_IO=1
+RUN make clean && make REAL_IO=1

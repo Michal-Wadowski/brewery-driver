@@ -119,6 +119,14 @@ JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_showNumberDecEx
 JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_showNumberHexEx
   (JNIEnv *, jobject, jint, jint, jint, jboolean, jint, jint);
 
+/*
+ * Class:     wadosm_breweryhost_DigiPortImpl
+ * Method:    debugEnable
+ * Signature: (Z)V
+ */
+JNIEXPORT void JNICALL Java_wadosm_breweryhost_DigiPortImpl_debugEnable
+  (JNIEnv *, jobject, jboolean);
+
 #ifdef __cplusplus
 }
 #endif

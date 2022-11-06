@@ -6,9 +6,17 @@ This is low-lewer driver part. The other projects are located at: [brewery-host]
 
 # Building
 
-To build Orange PI library just type:
+To build Orange PI library please type:
 
 ```shell
 docker image build . -t brewery-driver
+container_id=$(docker create brewery-driver:latest)
+docker cp $container_id:/driver/brewery_driver.so - > brewery_driver.so
+docker rm -v $container_id
 ```
 
+To build demo library just type:
+
+```shell
+make clean && make demo
+```

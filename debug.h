@@ -1,13 +1,8 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-inline void dummy(...) {}
-#ifdef DEBUG
-#include <stdio.h>
-#include <stdlib.h>
-#define debug(...) do {printf(__VA_ARGS__); fflush(stdout);} while(0)
-#else
-#define debug(...) dummy(__VA_ARGS__)
-#endif
+extern bool debugEnabled;
 
-#endif
+void debug(const char * format, ...);
+
+#endif // __DEBUG_H__
