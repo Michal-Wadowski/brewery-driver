@@ -1,0 +1,21 @@
+# docker image build . -f docker/Dockerfile-libs -t minipc:32000/orangepi-libs
+
+FROM ubuntu:18.04
+
+RUN apt-get update --fix-missing
+RUN apt-get install -y git gcc-arm-linux-gnueabihf g++ g++-arm-linux-gnueabihf make openjdk-11-jdk
+
+RUN git clone https://github.com/orangepi-xunlong/wiringOP
+WORKDIR wiringOP
+
+COPY custom.patch /custom.patch
+
+RUN git apply /custom.patch
+
+WORKDIR wiringPi
+
+RUN make && make install
+
+WORKDIR ../devLib
+
+RUN make && make install
