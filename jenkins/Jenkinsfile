@@ -1,5 +1,5 @@
 podTemplate(containers: [
-    containerTemplate(name: 'orangepi-libs', image: 'localhost:32000/orangepi-libs', command: 'sleep', args: '99d')
+    containerTemplate(name: 'orangepi-libs', image: 'localhost:32000/orangepi-libs', command: 'sleep', args: '99d', alwaysPullImage: true)
   ]) {
 
   node(POD_LABEL) {
